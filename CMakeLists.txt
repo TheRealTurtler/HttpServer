@@ -6,11 +6,11 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core)
 qt_standard_project_setup()
 
 qt_add_executable(HttpServer
-    main.cpp
-    httpserver.h httpserver.cpp
-    httpapi.h httpapi.cpp
-    httprequest.h httprequest.cpp
-    httpresponse.h httpresponse.cpp
+    src/main.cpp
+    src/httpserver.h src/httpserver.cpp
+    src/httpapi.h src/httpapi.cpp
+    src/httprequest.h src/httprequest.cpp
+    src/httpresponse.h src/httpresponse.cpp
 )
 
 find_package(Qt6
