@@ -30,8 +30,14 @@ void HttpServer::setSslConfig(const QString& sslCertFile, const QString& sslKeyF
     QFile fileCert(sslCertFile);
     QFile fileKey(sslKeyFile);
 
-    QSslCertificate sslCert = QSslCertificate(&fileCert, QSsl::Pem);
-    QSslKey sslKey = QSslKey(&fileKey, QSsl::Rsa, QSsl::Pem);
+    if (!fileCert.open(QFile::ReadOnly) || !fileKey.open(QFile::ReadOnly))
+    {
+        qDebug() << "Unable to open SSL certificate!";
+        return;
+    }
+
+    QSslCertificate sslCert = QSslCertificate(fileCert.readAll(), QSsl::Pem);
+    QSslKey sslKey = QSslKey(fileKey.readAll(), QSsl::Rsa, QSsl::Pem);
 
     setSslConfig(sslCert, sslKey, sslProtocol);
 }
@@ -56,26 +62,56 @@ void HttpServer::start()
         sslServer->setSslConfiguration(_sslConfig);
 
         _server = sslServer;
+
+        connect(_server, &QSslServer::acceptError, this, &HttpServer::acceptError);
     }
 
-    connect(_server, &QTcpServer::pendingConnectionAvailable, this, &HttpServer::connectionPending);
+    connect(_server, &QTcpServer::newConnection, this, &HttpServer::connectionPending);
 
     _server->listen(_listenAddress, _listenPort);
 }
 
 void HttpServer::connectionPending()
 {
-    QTcpSocket* socket = _server->nextPendingConnection();
+    while (_server->hasPendingConnections())
+    {
+        QTcpSocket* socket = _server->nextPendingConnection();
+
+        if (!socket)
+        {
+            qDebug() << "Socket invalid!";
+            continue;
+        }
+
+        qDebug() << socket->peerAddress().toString() << socket->peerPort() << "Connection opened";
+
+        connect(socket, &QTcpSocket::readyRead, this, &HttpServer::dataReceived);
+        connect(socket, &QTcpSocket::aboutToClose, this, &HttpServer::connectionClosed);
+        connect(socket, &QTcpSocket::disconnected, socket, &QTcpSocket::deleteLater);
+
+        connect(socket, &QTcpSocket::destroyed, this, &HttpServer::destroyed);
+
+        QSslSocket* sslSocket = qobject_cast<QSslSocket*>(socket);
+
+        if (sslSocket)
+        {
+            qDebug() << socket->peerAddress().toString() << socket->peerPort() << "Connection is SSL";
+
+            connect(sslSocket, &QSslSocket::handshakeInterruptedOnError, this, &HttpServer::handshakeInterruptedOnError);
+            connect(sslSocket, &QSslSocket::peerVerifyError, this, &HttpServer::peerVerifyError);
+            connect(sslSocket, &QSslSocket::sslErrors, this, &HttpServer::sslErrors);
+        }
+    }
+}
+
+void HttpServer::connectionClosed()
+{
+    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
 
     if (!socket)
-    {
-        qDebug() << "Socket invalid!";
         return;
-    }
 
-    qDebug() << "New Connection from IP:" << socket->peerAddress() << "Port:" << socket->peerPort();
-
-    connect(socket, &QTcpSocket::readyRead, this, &HttpServer::dataReceived);
+    qDebug() << socket->peerAddress().toString() << socket->peerPort() << "Connection closed";
 }
 
 void HttpServer::dataReceived()
@@ -91,7 +127,7 @@ void HttpServer::dataReceived()
     HttpRequest request(socket->readAll());
     HttpResponse response;
 
-    qDebug() << socket->peerAddress() << socket->peerPort() << "Method:" << request.getMethod() << "Target:" << request.getTarget() << "Data:" << request.getBody();
+    qDebug() << socket->peerAddress().toString() << socket->peerPort() << "Method:" << request.getMethod() << "Target:" << request.getTarget() << "Data:" << request.getBody();
 
     if (request.isValid())
     {
@@ -117,10 +153,40 @@ void HttpServer::dataReceived()
     }
 
     socket->write(response.getRawData());
-    socket->flush();
-
-    qDebug() << "Closing Connection to IP:" << socket->peerAddress() << "Port:" << socket->peerPort();
-
     socket->close();
-    socket->deleteLater();
+}
+
+void HttpServer::errorOccurred(QSslSocket *socket, QAbstractSocket::SocketError socketError)
+{
+    qDebug() << socket->peerAddress() << socket->peerPort() << socketError;
+}
+
+void HttpServer::acceptError(QAbstractSocket::SocketError socketError)
+{
+    qDebug() << "Socket Error:" << socketError;
+}
+
+void HttpServer::handshakeInterruptedOnError(const QSslError& error)
+{
+    qDebug() << "Handshake interrupted:" << error;
+}
+
+void HttpServer::peerVerifyError(const QSslError& error)
+{
+    qDebug() << "Peer verify:" << error;
+}
+
+void HttpServer::sslErrors(const QList<QSslError>& errors)
+{
+    qDebug() << "SSL errors:" << errors;
+}
+
+void HttpServer::destroyed()
+{
+    QObject* socket = qobject_cast<QObject*>(sender());
+
+    if (!socket)
+        return;
+
+    qDebug() << "Destroyed";
 }

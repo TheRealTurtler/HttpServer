@@ -32,7 +32,17 @@ public slots:
 
 private slots:
     void connectionPending();
+    void connectionClosed();
     void dataReceived();
+
+    void errorOccurred(QSslSocket *socket, QAbstractSocket::SocketError socketError);
+    void acceptError(QAbstractSocket::SocketError socketError);
+
+    void handshakeInterruptedOnError(const QSslError& error);
+    void peerVerifyError(const QSslError& error);
+    void sslErrors(const QList<QSslError>& errors);
+
+    void destroyed();
 
 private:
     QTcpServer* _server = nullptr;

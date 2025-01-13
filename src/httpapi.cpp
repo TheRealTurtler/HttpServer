@@ -7,6 +7,7 @@ HttpAPI::HttpAPI(QObject* parent) :
     QObject(parent)
 {
     _server = new HttpServer(QHostAddress::Any, 8080, this);
+    _server->setSslConfig("certs/certificate.crt", "certs/privatekey.key", QSsl::TlsV1_2OrLater);
 
     {
         auto cb = [this](const HttpRequest& request){ return replyHome(); };
