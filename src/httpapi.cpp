@@ -1,27 +1,52 @@
 #include "httpapi.h"
 
 #include <QJsonDocument>
+#include <QFile>
 
 
 HttpAPI::HttpAPI(QObject* parent) :
     QObject(parent)
 {
     _server = new HttpServer(QHostAddress::Any, 8080, this);
-    _server->setSslConfig("certs/certificate.crt", "certs/privatekey.key", QSsl::TlsV1_2OrLater);
 
+    QFile fileCert("certs/certificate.crt");
+    QFile fileKey("certs/privatekey.key");
+
+    QSslCertificate sslCert;
+    QSslKey sslKey;
+
+    if (fileCert.open(QFile::ReadOnly))
+        sslCert = QSslCertificate(fileCert.readAll(), QSsl::Pem);
+    else
+        qDebug() << "Cannot open Certificate!";
+
+    if (fileKey.open(QFile::ReadOnly))
+        sslKey = QSslKey(fileKey.readAll(), QSsl::Rsa, QSsl::Pem);
+    else
+        qDebug() << "Cannot open PrivateKey!";
+
+    _server->setSslConfig(sslCert, sslKey, QSsl::TlsV1_2OrLater);
+
+    auto cbGet = [this](const HttpRequest& request) { return cbGET(request); };
+    auto cbPost = [this](const HttpRequest& request) { return cbPOST(request); };
+
+    QStringList targetsGET;
+    targetsGET << "/";
+    targetsGET << "/test";
+
+    QStringList targetsPOST;
+    targetsPOST << "/";
+    targetsPOST << "/echo";
+    targetsPOST << "/test";
+
+    for (const auto& itTarget : targetsGET)
     {
-        auto cb = [this](const HttpRequest& request){ return replyHome(); };
-        _server->setCallback(HttpRequest::GET, "/", cb);
+        _server->setCallback(HttpRequest::GET, itTarget, cbGet);
     }
 
+    for (const auto& itTarget : targetsPOST)
     {
-        auto cb = [this](const HttpRequest& request){ return replyGetTest(); };
-        _server->setCallback(HttpRequest::GET, "/test", cb);
-    }
-
-    {
-        auto cb = [this](const HttpRequest& request){ return replyPostTest(request); };
-        _server->setCallback(HttpRequest::POST, "/test", cb);
+        _server->setCallback(HttpRequest::POST, itTarget, cbPost);
     }
 }
 
@@ -30,48 +55,94 @@ void HttpAPI::start()
     _server->start();
 }
 
-HttpResponse HttpAPI::replyHome()
+HttpResponse HttpAPI::cbGET(const HttpRequest& request)
 {
-    HttpResponse result;
+    HttpResponse response;
 
+    const QString& target = request.getTarget();
+
+    if (target == "/")
+        response = cbHome(request);
+    else if (target == "/test")
+        response = cbTestGET(request);
+    else
+        response.setStatus(HttpResponse::NOT_FOUND);
+
+    return response;
+}
+
+HttpResponse HttpAPI::cbPOST(const HttpRequest &request)
+{
+    HttpResponse response;
+
+    const QString& target = request.getTarget();
+
+    if (target == "/")
+        response = cbHome(request);
+    else if (target == "/echo")
+        response = cbEcho(request);
+    else if (target == "/test")
+        response = cbTestPOST(request);
+    else
+        response.setStatus(HttpResponse::NOT_FOUND);
+
+    return response;
+}
+
+HttpResponse HttpAPI::cbHome(const HttpRequest &request)
+{
     QString strBody = "Home";
 
-    result.setStatus(HttpResponse::OK);
-    result.addHeader("Content-Type", "text/html; charset=utf-8");
-    result.setBody(strBody.toUtf8());
-    return result;
+    HttpResponse response;
+    response.setStatus(HttpResponse::OK);
+    response.setHeader("Content-Type", "text/html; charset=utf-8");
+    response.setBody(strBody.toUtf8());
+
+    return response;
 }
 
-HttpResponse HttpAPI::replyGetTest()
+HttpResponse HttpAPI::cbEcho(const HttpRequest& request)
 {
-    HttpResponse result;
+    HttpResponse response;
+    response.setStatus(HttpResponse::OK);
+    response.setHeader("Contet-Type", request.getHeader("Content-Type"));
+    response.setBody(request.getBody());
 
+    return response;
+}
+
+HttpResponse HttpAPI::cbTestGET(const HttpRequest& request)
+{
     QString strBody = "GET Test OK";
 
-    result.setStatus(HttpResponse::OK);
-    result.addHeader("Content-Type", "text/html; charset=utf-8");
-    result.setBody(strBody.toUtf8());
-    return result;
+    HttpResponse response;
+    response.setStatus(HttpResponse::OK);
+    response.setHeader("Content-Type", "text/html; charset=utf-8");
+    response.setBody(strBody.toUtf8());
+
+    return response;
 }
 
-HttpResponse HttpAPI::replyPostTest(const HttpRequest& request)
+HttpResponse HttpAPI::cbTestPOST(const HttpRequest &request)
 {
-    HttpResponse result;
+    HttpResponse response;
 
     const QJsonDocument json = QJsonDocument::fromJson(request.getBody());
 
     if (json.isNull())
     {
-        result.setStatus(HttpResponse::BAD_REQUEST);
-        return result;
+        qDebug() << "JSON Request is invalid!";
+        response.setStatus(HttpResponse::BAD_REQUEST);
+        return response;
     }
 
     const QJsonValue valFunction = json["function"];
 
     if (valFunction == QJsonValue::Undefined || !valFunction.isString())
     {
-        result.setStatus(HttpResponse::BAD_REQUEST);
-        return result;
+        qDebug() << "JSON Function is invalid!";
+        response.setStatus(HttpResponse::BAD_REQUEST);
+        return response;
     }
 
     const QString strFunction = valFunction.toString();
@@ -80,15 +151,15 @@ HttpResponse HttpAPI::replyPostTest(const HttpRequest& request)
     {
         QString strBody = "Hello World!";
 
-        result.setStatus(HttpResponse::OK);
-        result.addHeader("Content-Type", "text/html; charset=utf-8");
-        result.setBody(strBody.toUtf8());
+        response.setStatus(HttpResponse::OK);
+        response.setHeader("Content-Type", "text/html; charset=utf-8");
+        response.setBody(strBody.toUtf8());
     }
     else if (strFunction == "echo")
     {
-        result.setStatus(HttpResponse::OK);
-        result.addHeader("Content-Type", "application/json");
-        result.setBody(request.getBody());
+        response.setStatus(HttpResponse::OK);
+        response.setHeader("Content-Type", request.getHeader("Content-Type"));
+        response.setBody(request.getBody());
     }
     else if (strFunction == "secret")
     {
@@ -96,23 +167,23 @@ HttpResponse HttpAPI::replyPostTest(const HttpRequest& request)
 
         if (valPassword == QJsonValue::Undefined || !valPassword.isString())
         {
-            result.setStatus(HttpResponse::BAD_REQUEST);
-            return result;
+            response.setStatus(HttpResponse::UNAUTHORIZED);
+            return response;
         }
 
         if (valPassword.toString() == "asdf1234")
         {
             QString strBody = "Password correct!";
 
-            result.setStatus(HttpResponse::OK);
-            result.addHeader("Content-Type", "text/html; charset=utf-8");
-            result.setBody(strBody.toUtf8());
+            response.setStatus(HttpResponse::OK);
+            response.setHeader("Content-Type", "text/html; charset=utf-8");
+            response.setBody(strBody.toUtf8());
         }
         else
-            result.setStatus(HttpResponse::UNAUTHORIZED);
+            response.setStatus(HttpResponse::UNAUTHORIZED);
     }
     else
-        result.setStatus(HttpResponse::BAD_REQUEST);
+        response.setStatus(HttpResponse::BAD_REQUEST);
 
-    return result;
+    return response;
 }

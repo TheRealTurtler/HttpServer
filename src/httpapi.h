@@ -20,12 +20,13 @@ public slots:
 private:
     HttpServer* _server = nullptr;
 
-    HttpResponse replyHome();
+    HttpResponse cbGET(const HttpRequest& request);
+    HttpResponse cbPOST(const HttpRequest& request);
 
-    HttpResponse replyGetTest();
-    HttpResponse replyPostTest(const HttpRequest& request);
-
-    static QMultiHash<QString, QString> getDefaultHeaders();
+    HttpResponse cbHome(const HttpRequest& request);
+    HttpResponse cbEcho(const HttpRequest& request);
+    HttpResponse cbTestGET(const HttpRequest& request);
+    HttpResponse cbTestPOST(const HttpRequest& request);
 };
 
 #endif // HTTPAPI_H
