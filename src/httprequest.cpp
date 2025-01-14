@@ -23,6 +23,7 @@ void HttpRequest::setData(const QByteArray& data)
     _target = "";
     _protocol = "";
     _headers.clear();
+    _targetParameters.clear();
     _body = "";
     _valid = false;
 
@@ -36,8 +37,30 @@ void HttpRequest::setData(const QByteArray& data)
             return;
 
         _method = getMethodFromString(list[0]);
-        _target = list[1];
-        _protocol = list[2];
+
+        QString path = list[1].trimmed();
+
+        if (_method == GET && path.contains('?'))
+        {
+            // Syntax: /target?par1=val1&par2=val2
+
+            const auto idx = path.indexOf('?');
+            _target = path.mid(0, idx);
+
+            const QStringList listPar = path.mid(idx + 1).split("&");
+
+            for (const auto& parPair : listPar)
+            {
+                const QStringList par = parPair.split('=', Qt::KeepEmptyParts);
+
+                if (par.size() == 2 && par.at(0) != "")
+                    _targetParameters.insert(par.at(0), par.at(1));
+            }
+        }
+        else
+            _target = path;
+
+        _protocol = list[2].trimmed();
     }
 
     if (_method != UNKNOWN)

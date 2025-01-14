@@ -23,12 +23,18 @@ public:
         DELETE,
     };
 
+    static QString getStringFromMethod(METHOD method) { return _methodTexts.value(method, ""); }
+    static METHOD getMethodFromString(const QString& strMethod) { return _methodTexts.key(strMethod, UNKNOWN); }
+
     METHOD getMethod() const { return _method; }
     const QString& getTarget() const { return _target; }
     const QString& getProtocol() const { return _protocol; }
 
     const QMultiHash<QString, QString>& getHeaders() const { return _headers; }
     QString getHeader(const QString& key) const { return _headers.value(key, ""); }
+
+    const QMultiHash<QString, QString>& getTargetParameters() const { return _targetParameters; }
+    QString getTargetParameter(const QString& key) const { return _targetParameters.value(key, ""); }
 
     const QByteArray& getBody() const { return _body; }
 
@@ -38,14 +44,12 @@ private:
     static const QHash<METHOD, QString> _methodTexts;
     static QHash<METHOD, QString> initMethodTexts();
 
-    static QString getStringFromMethod(METHOD method) { return _methodTexts.value(method, ""); }
-    static METHOD getMethodFromString(const QString& strMethod) { return _methodTexts.key(strMethod, UNKNOWN); }
-
     METHOD _method = UNKNOWN;
     QString _target;
     QString _protocol;
 
     QMultiHash<QString, QString> _headers;
+    QMultiHash<QString, QString> _targetParameters;
 
     QByteArray _body;
 
