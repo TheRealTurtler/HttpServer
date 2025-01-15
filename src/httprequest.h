@@ -28,6 +28,7 @@ public:
 
     METHOD getMethod() const { return _method; }
     const QString& getTarget() const { return _target; }
+    const QString& getTargetRaw() const { return _targetRaw; }
     const QString& getProtocol() const { return _protocol; }
 
     const QMultiHash<QString, QString>& getHeaders() const { return _headers; }
@@ -46,6 +47,7 @@ private:
 
     METHOD _method = UNKNOWN;
     QString _target;
+    QString _targetRaw;
     QString _protocol;
 
     QMultiHash<QString, QString> _headers;

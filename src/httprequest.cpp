@@ -37,17 +37,16 @@ void HttpRequest::setData(const QByteArray& data)
             return;
 
         _method = getMethodFromString(list[0]);
+        _targetRaw = list[1].trimmed();
 
-        QString path = list[1].trimmed();
-
-        if (_method == GET && path.contains('?'))
+        if (_method == GET && _targetRaw.contains('?'))
         {
             // Syntax: /target?par1=val1&par2=val2
 
-            const auto idx = path.indexOf('?');
-            _target = path.mid(0, idx);
+            const auto idx = _targetRaw.indexOf('?');
+            _target = _targetRaw.mid(0, idx);
 
-            const QStringList listPar = path.mid(idx + 1).split("&");
+            const QStringList listPar = _targetRaw.mid(idx + 1).split("&");
 
             for (const auto& parPair : listPar)
             {
@@ -58,7 +57,7 @@ void HttpRequest::setData(const QByteArray& data)
             }
         }
         else
-            _target = path;
+            _target = _targetRaw;
 
         _protocol = list[2].trimmed();
     }
@@ -78,19 +77,17 @@ void HttpRequest::setData(const QByteArray& data)
                 isHeader = false;
             else
             {
-                const QStringList list = QString::fromLatin1(line).split(':');
+                const QString header = QString::fromLatin1(line.trimmed());
+                const auto idx = header.indexOf(':');
 
-                if (list.size() < 2)
+                if (idx > 0)
                 {
-                    _valid = false;
-                    return;
+                    const QString key = header.mid(0, idx).trimmed();
+                    const QString value = header.mid(idx + 1).trimmed();
+
+                    if (key != "" && value != "")
+                        _headers.insert(key, value);
                 }
-
-                const QString key = list [0].trimmed();
-                const QString value = list[1].trimmed();
-
-                if (key != "" && value != "")
-                    _headers.insert(key, value);
             }
         }
         else

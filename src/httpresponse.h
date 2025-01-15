@@ -15,6 +15,8 @@ public:
     {
         OK = 200,
 
+        MOVED_PERMANENTLY = 301,
+
         BAD_REQUEST = 400,
         UNAUTHORIZED = 401,
         FORBIDDEN = 403,
@@ -44,7 +46,7 @@ private:
     static const QHash<STATUS, QString> _statusTexts;
     static QHash<STATUS, QString> initStatusTexts();
 
-    QString _protocol = "HTTP/1.1";
+    QString _protocol = "HTTP/1.0";     // TODO: 1.1 -> Some Headers are mandatory!
 
     STATUS _status = INTERNAL_SERVER_ERROR;
 

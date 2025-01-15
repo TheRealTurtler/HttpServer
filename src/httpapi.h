@@ -20,13 +20,14 @@ public slots:
 private:
     HttpServer* _server = nullptr;
 
-    HttpResponse cbGET(const HttpRequest& request);
-    HttpResponse cbPOST(const HttpRequest& request);
+    HttpResponse cbGET(const HttpRequest& request, const QString& logInfo);
+    HttpResponse cbPOST(const HttpRequest& request, const QString& logInfo);
 
-    HttpResponse cbHome(const HttpRequest& request);
-    HttpResponse cbEcho(const HttpRequest& request);
-    HttpResponse cbTestGET(const HttpRequest& request);
-    HttpResponse cbTestPOST(const HttpRequest& request);
+    HttpResponse cbHome(const HttpRequest& request, const QString& logInfo);
+    HttpResponse cbPing(const HttpRequest& request, const QString& logInfo);
+    HttpResponse cbEcho(const HttpRequest& request, const QString& logInfo);
+    HttpResponse cbTestGET(const HttpRequest& request, const QString& logInfo);
+    HttpResponse cbTestPOST(const HttpRequest& request, const QString& logInfo);
 };
 
 #endif // HTTPAPI_H

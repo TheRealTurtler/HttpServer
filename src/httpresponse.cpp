@@ -28,7 +28,7 @@ QByteArray HttpResponse::getRawData() const
     // Headers
     for (auto it = _headers.cbegin(); it != _headers.cend(); ++it)
     {
-        result += it.key().toLatin1() + ":" + it.value().toLatin1();
+        result += it.key().toLatin1() + ": " + it.value().toLatin1();
         result += "\r\n";
     }
 
@@ -43,6 +43,8 @@ QHash<HttpResponse::STATUS, QString> HttpResponse::initStatusTexts()
     QHash<STATUS, QString> result;
 
     result.insert(OK,                       "OK");
+
+    result.insert(MOVED_PERMANENTLY,        "Moved Permanently");
 
     result.insert(BAD_REQUEST,              "Bad Request");
     result.insert(UNAUTHORIZED,             "Unauthorized");

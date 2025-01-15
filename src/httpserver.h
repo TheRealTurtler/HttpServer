@@ -30,7 +30,10 @@ public:
     void setSslConfig(const QSslConfiguration& sslConf);
     void setSslConfig(const QSslCertificate& sslCert, const QSslKey& sslKey, QSsl::SslProtocol sslProtocol);
 
-    void setCallback(HttpRequest::METHOD method, const QString& target, const std::function<HttpResponse(const HttpRequest&)>& function);
+    void setEnableHttp(bool enable) { _enableHttp = enable; }
+    void setEnableHttpRedirection(bool enable) { _enableHttpRedirection = enable; }
+
+    void setCallback(HttpRequest::METHOD method, const QString& target, const std::function<HttpResponse(const HttpRequest&, const QString&)>& function);
     void removeCallback(HttpRequest::METHOD method, const QString& target);
 
 public slots:
@@ -53,7 +56,12 @@ private:
 
     QSslConfiguration _sslConfig = QSslConfiguration();
 
-    QHash<QPair<HttpRequest::METHOD, QString>, std::function<HttpResponse(const HttpRequest&)> > _hashCallbacks;
+    bool _enableHttp = true;
+    bool _enableHttpRedirection = false;
+
+    QHash<QPair<HttpRequest::METHOD, QString>, std::function<HttpResponse(const HttpRequest&, const QString&)> > _hashCallbacks;
+
+    HttpResponse handleHttpRequest(const HttpRequest& request, const QString& logInfo);
 };
 
 #endif // HTTPSERVER_H
