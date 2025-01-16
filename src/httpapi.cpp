@@ -2,12 +2,14 @@
 
 #include <QJsonDocument>
 #include <QFile>
+#include <QSslCertificate>
+#include <QSslKey>
 
 
 HttpAPI::HttpAPI(QObject* parent) :
     QObject(parent)
 {
-    _server = new HttpServer(QHostAddress::Any, 8080, this);
+    m_server = new HttpServer(QHostAddress::Any, 8080, this);
 
     QFile fileCert("certs/certificate.crt");
     QFile fileKey("certs/privatekey.key");
@@ -25,8 +27,8 @@ HttpAPI::HttpAPI(QObject* parent) :
     else
         qDebug() << "Cannot open PrivateKey!";
 
-    _server->setSslConfig(sslCert, sslKey, QSsl::TlsV1_2OrLater);
-    _server->setEnableHttpRedirection(true);
+    m_server->setSslConfig(sslCert, sslKey, QSsl::TlsV1_2OrLater);
+    m_server->setEnableHttpRedirection(true);
 
     auto cbGet = [this](const HttpRequest& request, const QString& logInfo) { return cbGET(request, logInfo); };
     auto cbPost = [this](const HttpRequest& request, const QString& logInfo) { return cbPOST(request, logInfo); };
@@ -43,18 +45,32 @@ HttpAPI::HttpAPI(QObject* parent) :
 
     for (const auto& itTarget : targetsGET)
     {
-        _server->setCallback(HttpRequest::GET, itTarget, cbGet);
+        m_server->setCallback(HttpRequest::GET, itTarget, cbGet);
     }
 
     for (const auto& itTarget : targetsPOST)
     {
-        _server->setCallback(HttpRequest::POST, itTarget, cbPost);
+        m_server->setCallback(HttpRequest::POST, itTarget, cbPost);
+    }
+}
+
+HttpAPI::~HttpAPI()
+{
+    if (m_server)
+    {
+        m_server->deleteLater();
+        m_server = nullptr;
     }
 }
 
 void HttpAPI::start()
 {
-    _server->start();
+    m_server->start();
+}
+
+void HttpAPI::stop()
+{
+    m_server->stop();
 }
 
 HttpResponse HttpAPI::cbGET(const HttpRequest& request, const QString& logInfo)
@@ -142,6 +158,10 @@ HttpResponse HttpAPI::cbTestGET(const HttpRequest& request, const QString& logIn
 HttpResponse HttpAPI::cbTestPOST(const HttpRequest &request, const QString& logInfo)
 {
     HttpResponse response;
+
+    const QString contentType = request.getHeader("Content-Type", Qt::CaseInsensitive);
+
+    qDebug() << logInfo << "ContentType:" << contentType;
 
     const QJsonDocument json = QJsonDocument::fromJson(request.getBody());
 

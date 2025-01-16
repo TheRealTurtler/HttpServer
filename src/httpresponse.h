@@ -9,8 +9,7 @@
 class HttpResponse
 {
 public:
-    HttpResponse();
-
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
     enum STATUS
     {
         OK = 200,
@@ -21,38 +20,44 @@ public:
         UNAUTHORIZED = 401,
         FORBIDDEN = 403,
         NOT_FOUND = 404,
+        METHOD_NOT_ALLOWED = 405,
 
         INTERNAL_SERVER_ERROR = 500,
     };
 
-    static QString getStringFromStatus(STATUS status) { return _statusTexts.value(status, ""); }
+    HttpResponse();
+    HttpResponse(STATUS status);
 
-    void setStatus(STATUS status) { _status = status; }
-    STATUS getStatus() { return _status; }
+    static QString getStringFromStatus(STATUS status) { return m_statusTexts.value(status, ""); }
 
-    void setHeaders(const QMultiHash<QString, QString>& headers) { _headers = headers; }
-    void setHeader(const QString& key, const QString& value) { _headers[key] = value; }
-    void addHeader(const QString& key, const QString& value) { _headers.insert(key, value); }
-    void removeHeader(const QString& key) { _headers.remove(key); }
+    void setStatus(STATUS status) { m_status = status; }
+    STATUS getStatus() { return m_status; }
 
-    QMultiHash<QString, QString> getHeaders() { return _headers; }
+    // https://developer.mozilla.org/en-US/docs/Glossary/Response_header
+    void setHeaders(const QMultiHash<QString, QString>& headers) { m_headers = headers; }
+    void setHeader(const QString& key, const QString& value) { m_headers[key] = value; }
+    void addHeader(const QString& key, const QString& value) { m_headers.insert(key, value); }
+    void removeHeader(const QString& key) { m_headers.remove(key); }
+
+    QMultiHash<QString, QString> getHeaders() { return m_headers; }
 
     void setBody(const QByteArray& body);
-    const QByteArray& getBody() { return _body; }
+    const QByteArray& getBody() { return m_body; }
 
     QByteArray getRawData() const;
 
+    void checkHeaders();
+
 private:
-    static const QHash<STATUS, QString> _statusTexts;
+    static const QHash<STATUS, QString> m_statusTexts;
     static QHash<STATUS, QString> initStatusTexts();
 
-    QString _protocol = "HTTP/1.0";     // TODO: 1.1 -> Some Headers are mandatory!
+    QString m_protocol = "HTTP/1.0";     // TODO: 1.1 -> Some Headers are mandatory!
+    STATUS m_status;
 
-    STATUS _status = INTERNAL_SERVER_ERROR;
+    QMultiHash<QString, QString> m_headers;
 
-    QMultiHash<QString, QString> _headers;
-
-    QByteArray _body = QByteArray();
+    QByteArray m_body;
 };
 
 #endif // HTTPRESPONSE_H

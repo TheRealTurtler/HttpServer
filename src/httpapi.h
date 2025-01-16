@@ -13,12 +13,14 @@ class HttpAPI : public QObject
 
 public:
     explicit HttpAPI(QObject* parent = nullptr);
+    ~HttpAPI();
 
 public slots:
     void start();
+    void stop();
 
 private:
-    HttpServer* _server = nullptr;
+    HttpServer* m_server = nullptr;
 
     HttpResponse cbGET(const HttpRequest& request, const QString& logInfo);
     HttpResponse cbPOST(const HttpRequest& request, const QString& logInfo);

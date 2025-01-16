@@ -13,49 +13,56 @@ public:
 
     void setData(const QByteArray& data);
 
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
     enum METHOD
     {
         UNKNOWN = -1,
 
         GET,
+        HEAD,
         POST,
         PUT,
         DELETE,
+        CONNECT,
+        OPTIONS,
+        TRACE,
+        PATCH,
     };
 
-    static QString getStringFromMethod(METHOD method) { return _methodTexts.value(method, ""); }
-    static METHOD getMethodFromString(const QString& strMethod) { return _methodTexts.key(strMethod, UNKNOWN); }
+    static QString getStringFromMethod(METHOD method) { return m_methodTexts.value(method, ""); }
+    static METHOD getMethodFromString(const QString& strMethod) { return m_methodTexts.key(strMethod, UNKNOWN); }
 
-    METHOD getMethod() const { return _method; }
-    const QString& getTarget() const { return _target; }
-    const QString& getTargetRaw() const { return _targetRaw; }
-    const QString& getProtocol() const { return _protocol; }
+    METHOD getMethod() const { return m_method; }
+    const QString& getTarget() const { return m_target; }
+    const QString& getTargetRaw() const { return m_targetRaw; }
+    const QString& getProtocol() const { return m_protocol; }
 
-    const QMultiHash<QString, QString>& getHeaders() const { return _headers; }
-    QString getHeader(const QString& key) const { return _headers.value(key, ""); }
+    // https://developer.mozilla.org/en-US/docs/Glossary/Request_header
+    const QMultiHash<QString, QString>& getHeaders() const { return m_headers; }
+    QString getHeader(const QString& key, Qt::CaseSensitivity cs = Qt::CaseSensitive) const;
 
-    const QMultiHash<QString, QString>& getTargetParameters() const { return _targetParameters; }
-    QString getTargetParameter(const QString& key) const { return _targetParameters.value(key, ""); }
+    const QMultiHash<QString, QString>& getTargetParameters() const { return m_targetParameters; }
+    QString getTargetParameter(const QString& key) const { return m_targetParameters.value(key, ""); }
 
-    const QByteArray& getBody() const { return _body; }
+    const QByteArray& getBody() const { return m_body; }
 
-    bool isValid() const { return _valid; }
+    bool isValid() const { return m_valid; }
 
 private:
-    static const QHash<METHOD, QString> _methodTexts;
+    static const QHash<METHOD, QString> m_methodTexts;
     static QHash<METHOD, QString> initMethodTexts();
 
-    METHOD _method = UNKNOWN;
-    QString _target;
-    QString _targetRaw;
-    QString _protocol;
+    METHOD m_method = UNKNOWN;
+    QString m_target;
+    QString m_targetRaw;
+    QString m_protocol;
 
-    QMultiHash<QString, QString> _headers;
-    QMultiHash<QString, QString> _targetParameters;
+    QMultiHash<QString, QString> m_headers;
+    QMultiHash<QString, QString> m_targetParameters;
 
-    QByteArray _body;
+    QByteArray m_body;
 
-    bool _valid = false;
+    bool m_valid = false;
 };
 
 #endif // HTTPREQUEST_H
